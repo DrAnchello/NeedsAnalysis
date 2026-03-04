@@ -275,6 +275,7 @@
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    .card.no-anim { animation: none; }
     .card-accent {
       height: 3px;
       background: linear-gradient(90deg, var(--brand-700), var(--accent-500));
@@ -821,12 +822,15 @@ const MODULES = [
     desc:'Client overview, requirements scope, pain points & priorities',
     zohoModule:null, // saved via updateRecord directly to S.naId
     sections:[
-      { title:'Customer Information', fields:[
-        {n:'No_of_Users',l:'No. of Users',t:'num',req:true},
-        {n:'Multi_Branch_Site',l:'Multi Branch/Site',t:'bool'},
-        {n:'Number_of_Branch_Site_s',l:'Number of Branches',t:'num',dep:'Multi_Branch_Site'},
-        {n:'Existing_Service_Provider',l:'Existing Service Provider',t:'txt'},
-        {n:'Industry',l:'Industry',t:'txt'},
+      { title:'Lead Information', fields:[
+        {n:'Lead_Name',l:'Lead Name',t:'txt',ro:true},
+        {n:'Industry',l:'Industry',t:'txt',ro:true},
+        {n:'Sub_Category',l:'Sub-Category',t:'txt',ro:true},
+        {n:'Contact_Name',l:'Contact Name',t:'txt',ro:true},
+        {n:'Phone',l:'Phone',t:'txt',ro:true},
+        {n:'Company',l:'Company',t:'txt',ro:true},
+        {n:'Email',l:'Email',t:'txt',ro:true},
+        {n:'Analysis_Status',l:'Analysis Status',t:'pick',def:'Draft',opts:['Draft','In Progress','Completed']},
       ]},
       { title:'Overview of Client Needs', fields:[
         {n:'UCaaS',l:'UCaaS',t:'bool'},
@@ -1137,13 +1141,13 @@ const MODULES = [
 // ═══════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════
-const S = { step:-1, leadId:null, leadName:'Loading...', naId:null, entity:null, data:{}, saved:new Set(), loading:false };
+const S = { step:-1, leadId:null, leadName:'Loading...', naId:null, entity:null, data:{}, recordIds:{}, loading:false, isRerender:false };
 
 function af(m){ return m.sections.flatMap(s=>s.fields); }
 
 MODULES.forEach(m=>{
   S.data[m.key]={};
-  af(m).forEach(f=>{ S.data[m.key][f.n] = f.t==='bool'?false : f.t==='multi'?[] : ''; });
+  af(m).forEach(f=>{ S.data[m.key][f.n] = f.def!=null?f.def : f.t==='bool'?false : f.t==='multi'?[] : ''; });
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1215,6 +1219,16 @@ function initZoho(){
       if(r.data&&r.data[0]){
         var rec=r.data[0];
         S.leadName=rec.Full_Name||rec.Company||rec.Last_Name||rec.Lead_Name||rec.Name||'Lead Record';
+
+        // Populate Lead Information fields from lead record
+        var pd=S.data.parent;
+        pd.Lead_Name=rec.Lead_Name||rec.Full_Name||rec.Name||'';
+        pd.Industry=rec.Industry||'';
+        pd.Sub_Category=rec.Sub_Category||'';
+        pd.Contact_Name=rec.Full_Name||((rec.First_Name||'')+' '+(rec.Last_Name||'')).trim()||'';
+        pd.Phone=rec.Phone||rec.Mobile||'';
+        pd.Company=rec.Company||'';
+        pd.Email=rec.Email||'';
         render();
 
         // Search for linked Needs Analysis record
@@ -1238,6 +1252,7 @@ function initZoho(){
     }).catch(function(e){console.error('Lead fetch error',e);});
   });
   ZOHO.embeddedApp.init();
+  ZOHO.CRM.UI.Resize({height:"625",width:"750"});
 }
 
 function loadParentAndChildren(){
@@ -1255,7 +1270,7 @@ function loadParentAndChildren(){
           }
         }
       });
-      S.saved.add('parent');
+      S.recordIds.parent=prec.id;
     }
     render();
     loadAll();
@@ -1303,7 +1318,7 @@ async function loadAll(){
             }
           }
         });
-        S.saved.add(m.key);
+        S.recordIds[m.key]=rec.id;
       }
     }catch(e){console.log('No data: '+m.zohoModule);}
   }
@@ -1312,43 +1327,46 @@ async function loadAll(){
 
 async function saveMod(mc){
   const d={};
-  af(mc).forEach(f=>{ if(vis(f,mc.key)&&!emp(S.data[mc.key][f.n])) d[f.n]=S.data[mc.key][f.n]; });
+  af(mc).forEach(f=>{ if(!f.ro&&vis(f,mc.key)&&!emp(S.data[mc.key][f.n])) d[f.n]=S.data[mc.key][f.n]; });
 
   try{
     if(mc.key==='parent'){
       if(!S.naId) return false;
       d.id=S.naId;
       await ZOHO.CRM.API.updateRecord({Entity:"Needs_Analysis",APIData:d,Trigger:["workflow"]});
-      S.saved.add(mc.key); return true;
+      S.recordIds.parent=S.naId; return true;
     }
 
     // Child modules need a parent record to exist
     if(!S.naId) return false;
-
-    // Search for existing child, then insert or update
     d.Needs_Analysis=S.naId;
-    const ex=await ZOHO.CRM.API.searchRecord({Entity:mc.zohoModule,Type:"criteria",Query:"(Needs_Analysis:equals:"+S.naId+")"});
-    if(ex.data&&ex.data[0]){
-      d.id=ex.data[0].id;
+
+    // If we already have the record ID, update directly
+    if(S.recordIds[mc.key]){
+      d.id=S.recordIds[mc.key];
       await ZOHO.CRM.API.updateRecord({Entity:mc.zohoModule,APIData:d,Trigger:["workflow"]});
     }else{
+      // First save — insert and store the returned ID
       d.Name=mc.title;
-      await ZOHO.CRM.API.insertRecord({Entity:mc.zohoModule,APIData:d,Trigger:["workflow"]});
+      const res=await ZOHO.CRM.API.insertRecord({Entity:mc.zohoModule,APIData:d,Trigger:["workflow"]});
+      if(res.data&&res.data[0]&&res.data[0].details&&res.data[0].details.id){
+        S.recordIds[mc.key]=res.data[0].details.id;
+      }
     }
-    S.saved.add(mc.key); return true;
+    return true;
   }catch(e){console.error('saveMod error:',mc.key,JSON.stringify(e)); return false;}
 }
 
 async function submitAll(){
   S.loading=true; render();
-  let ok=true;
-  for(const m of activeModules()){ if(!await saveMod(m)) ok=false; }
-  if(ok&&S.naId){
-    await ZOHO.CRM.API.updateRecord({Entity:"Needs_Analysis",
-      APIData:{id:S.naId,Analysis_Status:"Completed"},
-      Trigger:["workflow"]});
-    toast('Needs Analysis submitted','ok');
-  }else{toast('Some modules failed — retry','err');}
+  try{
+    if(S.naId){
+      await ZOHO.CRM.API.updateRecord({Entity:"Needs_Analysis",
+        APIData:{id:S.naId,Analysis_Status:"Completed"},
+        Trigger:["workflow"]});
+      toast('Needs Analysis submitted','ok');
+    }else{toast('No record to submit','err');}
+  }catch(e){console.error('submitAll error:',e);toast('Submit failed — retry','err');}
   S.loading=false; render();
 }
 
@@ -1357,8 +1375,30 @@ async function submitAll(){
 // ═══════════════════════════════════════════════════════════════
 function render(){
   const el=document.getElementById('app');
-  if(S.loading){el.innerHTML='<div class="spin-wrap"><div class="spin"></div><div class="spin-text">Saving to Zoho CRM...</div></div>';return;}
+  if(S.loading){el.innerHTML='<div class="spin-wrap"><div class="spin"></div><div class="spin-text">Saving to Zoho CRM...</div></div>';S.isRerender=false;return;}
+
+  // Preserve scroll position and focused field before re-render
+  const cb=el.querySelector('.card-body');
+  const scrollY=cb?cb.scrollTop:0;
+  const ae=document.activeElement;
+  const focusId=ae&&ae.id?ae.id:null;
+  const focusSelector=ae&&ae.dataset&&ae.dataset.f?`[data-f="${ae.dataset.f}"]`:null;
+
   S.step===-1?rSum(el):rForm(el);
+
+  // Restore scroll position
+  const newCb=el.querySelector('.card-body');
+  if(newCb&&scrollY) newCb.scrollTop=scrollY;
+
+  // Restore focus
+  if(focusId){
+    const fe=document.getElementById(focusId);
+    if(fe) fe.focus();
+  }else if(focusSelector){
+    const fe=el.querySelector(focusSelector);
+    if(fe) fe.focus();
+  }
+  S.isRerender=false;
 }
 
 function rSum(el){
@@ -1451,7 +1491,7 @@ function rForm(el){
       }).join('')}
     </div>
 
-    <div class="card">
+    <div class="card${S.isRerender?' no-anim':''}">
       <div class="card-accent"></div>
       <div class="card-hdr">
         <div class="card-ico" style="background:${m.iconBg}">${m.icon}</div>
@@ -1471,7 +1511,8 @@ function rForm(el){
         </button>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-g" onclick="saveS()">Save Section</button>
-          ${last?`<button class="btn btn-ok" onclick="saveFin()">Save & Review</button>`
+          ${last?(S.recordIds[m.key]?`<button class="btn btn-ok" onclick="home()">Finished</button>`
+               :`<button class="btn btn-ok" onclick="saveFin()">Save & Review</button>`)
                :`<button class="btn btn-p" onclick="go(${S.step+1})">Next
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4L10 8L6 12"/></svg>
                 </button>`}
@@ -1490,6 +1531,9 @@ function rf(f,mk){
     const a=Array.isArray(v)?v:[];
     return `<div class="fg ${sp}"><label>${f.l}</label><div class="chips">${f.opts.map(o=>`<label class="chip ${a.includes(o)?'on':''}"><input type="checkbox" ${a.includes(o)?'checked':''} onchange="ms('${mk}','${f.n}','${o}',this.checked)">${o}</label>`).join('')}</div></div>`;
   }
+  if(f.ro){
+    return `<div class="fg ${sp}"><label>${f.l}</label><input type="text" value="${v||''}" readonly style="background:#f5f5f5;color:#555;cursor:default;"></div>`;
+  }
   const rq=f.req?'<span class="rq">*</span>':'';
   if(f.t==='pick'){
     return `<div class="fg ${sp}"><label>${f.l}${rq}</label><select data-m="${mk}" data-f="${f.n}" onchange="inp(this)"><option value="">Select...</option>${f.opts.map(o=>`<option value="${o}" ${v===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
@@ -1505,12 +1549,12 @@ function rf(f,mk){
 // HANDLERS
 // ═══════════════════════════════════════════════════════════════
 function inp(el){S.data[el.dataset.m][el.dataset.f]=el.value;}
-function chk(mk,fn,v){S.data[mk][fn]=v;render();}
+function chk(mk,fn,v){S.data[mk][fn]=v;S.isRerender=true;render();}
 function ms(mk,fn,o,on){
   const a=S.data[mk][fn]||[];
   if(on&&!a.includes(o))a.push(o);
   if(!on){const i=a.indexOf(o);if(i>-1)a.splice(i,1);}
-  S.data[mk][fn]=a;render();
+  S.data[mk][fn]=a;S.isRerender=true;render();
 }
 function go(i){
   const am=activeModules();
