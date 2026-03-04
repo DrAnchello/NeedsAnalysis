@@ -1,1 +1,18 @@
-node_modules
+# dependencies
+node_modules/
+
+# build artifacts
+dist/
+*.zip
+
+# logs
+*.log
+ZET-debug.log
+
+# local certs/secrets
+cert.pem
+key.pem
+
+# optional common local files
+.env
+.env.*
