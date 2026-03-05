@@ -5,6 +5,7 @@ function initZoho(){
   ZOHO.embeddedApp.on("PageLoad",function(d){
     S.entity=d.Entity;
     S.leadId=Array.isArray(d.EntityId)?d.EntityId[0]:d.EntityId;
+    ZOHO.CRM.UI.Resize({height:"1100",width:"1600"});
     render(); // Render immediately so the page isn't blank
 
     // Get the Lead record for display name
@@ -45,7 +46,6 @@ function initZoho(){
     }).catch(function(e){console.error('Lead fetch error',e);});
   });
   ZOHO.embeddedApp.init();
-  ZOHO.CRM.UI.Resize({height:"625",width:"750"});
 }
 
 function loadParentAndChildren(){

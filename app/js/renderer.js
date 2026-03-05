@@ -49,46 +49,63 @@ function rSum(el){
       <div class="badge ${c===t?'badge-ok':'badge-warn'}"><div class="dot"></div>${c===t?'Complete':'In Progress'}</div>
     </div>
 
-    <div class="dash-header">
-      <div class="dash-progress">
-        <div class="dash-ring">
-          <svg width="44" height="44" viewBox="0 0 44 44">
-            <circle class="dash-ring-track" cx="22" cy="22" r="18"/>
-            <circle class="dash-ring-fill" cx="22" cy="22" r="18"
-              stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
-          </svg>
-          <div class="dash-ring-text">${pct}%</div>
+    <div class="sum-layout">
+      <div class="sum-sidebar">
+        <div class="sum-stat-card">
+          <div class="dash-ring" style="width:68px;height:68px;">
+            <svg width="68" height="68" viewBox="0 0 44 44">
+              <circle class="dash-ring-track" cx="22" cy="22" r="18"/>
+              <circle class="dash-ring-fill" cx="22" cy="22" r="18"
+                stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <div class="dash-ring-text" style="font-size:13px;">${pct}%</div>
+          </div>
+          <div class="sum-stat-label"><strong>${c} of ${t}</strong> sections complete</div>
+          <div class="sum-stat-divider"></div>
+          ${am.map(m=>{
+            const s=modStat(m.key);
+            return `<div class="sum-stat-row">
+              <span class="sum-stat-ico" style="background:${m.iconBg}">${m.icon}</span>
+              <span class="sum-stat-name">${m.title}</span>
+              <span class="sbadge ${s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'}" style="font-size:9px;padding:2px 6px;">${s==='ok'?'Done':s==='wip'?'WIP':'—'}</span>
+            </div>`;
+          }).join('')}
         </div>
-        <div class="dash-label"><strong>${c} of ${t}</strong> sections complete</div>
+        <div class="sum-action-card">
+          ${S.data.parent.Analysis_Status==='Completed'
+            ?`<p class="sum-action-hint">Needs Analysis has been submitted</p>
+               <button class="btn btn-ok" onclick="closeWidget()" style="width:100%;">Close</button>`
+            :(allReqDone()
+              ?`<p class="sum-action-hint">All sections complete — ready to submit</p>
+                 <button class="btn btn-ok" onclick="doSubmit()" style="width:100%;">Submit Analysis</button>`
+              :`<p class="sum-action-hint">Complete all required fields before submitting</p>
+                 <div style="display:flex;flex-direction:column;gap:8px;">
+                   <button class="btn btn-g" onclick="saveForLater()" style="width:100%;">Save for Later</button>
+                   <button class="btn btn-ok" style="width:100%;" disabled>Submit Analysis</button>
+                 </div>`)}
+        </div>
       </div>
-    </div>
-
-    <div class="sgrid">
-      ${am.map((m,i)=>{
-        const s=modStat(m.key);
-        const total=af(m).length;
-        const filled=fc(m.key);
-        const barPct=total>0?Math.round((filled/total)*100):0;
-        return `<div class="scard ${s==='ok'?'s-ok':s==='wip'?'s-wip':''}" onclick="go(${i})">
-          <div class="scard-h">
-            <h3><span class="scard-ico" style="background:${m.iconBg}">${m.icon}</span>${m.title}</h3>
-            <span class="sbadge ${s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'}">${s==='ok'?'Complete':s==='wip'?'In Progress':'Not Started'}</span>
-          </div>
-          <p>${m.desc}</p>
-          <div class="fc">
-            ${filled}/${total} fields
-            <div class="fc-bar"><div class="fc-bar-fill" style="width:${barPct}%"></div></div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-
-    <div class="submit-bar">
-      ${S.data.parent.Analysis_Status==='Completed'
-        ?`<span class="hint">Needs Analysis has been submitted</span>
-           <button class="btn btn-ok" onclick="closeWidget()">Close</button>`
-        :`<span class="hint">${c===t?'All sections complete — ready to submit':'Complete all sections before submitting'}</span>
-           <button class="btn btn-ok" onclick="doSubmit()">Submit Analysis</button>`}
+      <div class="sum-main">
+        <div class="sgrid">
+          ${am.map((m,i)=>{
+            const s=modStat(m.key);
+            const total=af(m).length;
+            const filled=fc(m.key);
+            const barPct=total>0?Math.round((filled/total)*100):0;
+            return `<div class="scard ${s==='ok'?'s-ok':s==='wip'?'s-wip':''}" onclick="go(${i})">
+              <div class="scard-h">
+                <h3><span class="scard-ico" style="background:${m.iconBg}">${m.icon}</span>${m.title}</h3>
+                <span class="sbadge ${s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'}">${s==='ok'?'Complete':s==='wip'?'In Progress':'Not Started'}</span>
+              </div>
+              <p>${m.desc}</p>
+              <div class="fc">
+                ${filled}/${total} fields
+                <div class="fc-bar"><div class="fc-bar-fill" style="width:${barPct}%"></div></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
     </div>`;
 }
 
@@ -110,44 +127,52 @@ function rForm(el){
       </button>
     </div>
 
-    <div class="stepper">
-      ${am.map((x,i)=>{
-        const s=modStat(x.key);
-        const cls=i===S.step?'active':s==='ok'?'done':'';
-        const ico=s==='ok'&&i!==S.step?'<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 5.5"/></svg>':(i+1);
-        return `<div class="stp ${cls}" onclick="go(${i})">
-          <div class="stp-num">${ico}</div>
-          <div class="stp-lbl">${x.title}</div>
-          ${i<am.length-1?'<div class="stp-line"></div>':''}
-        </div>`;
-      }).join('')}
-    </div>
-
-    <div class="card${S.isRerender?' no-anim':''}">
-      <div class="card-accent"></div>
-      <div class="card-hdr">
-        <div class="card-ico" style="background:${m.iconBg}">${m.icon}</div>
-        <div><h2>${m.title}</h2><p>${m.desc}</p></div>
-      </div>
-      <div class="card-body">
-        ${m.sections.map(sec=>{
-          const vf=sec.fields.filter(f=>vis(f,m.key));
-          if(!vf.length) return '';
-          return `<div class="sec">${sec.title}</div><div class="grid">${vf.map(f=>rf(f,m.key)).join('')}</div>`;
+    <div class="form-layout">
+      <nav class="form-nav">
+        <div class="fnav-header">Sections</div>
+        ${am.map((x,i)=>{
+          const s=modStat(x.key);
+          const isActive=i===S.step;
+          const checkCls=isActive?'active-dot':s==='ok'?'done':s==='wip'?'wip':'';
+          const checkInner=s==='ok'&&!isActive?'<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5L6.5 11.5L12.5 5.5"/></svg>':'';
+          return `<div class="fnav-item ${isActive?'active':''}" onclick="go(${i})">
+            <span class="fnav-ico" style="background:${x.iconBg}">${x.icon}</span>
+            <div class="fnav-info">
+              <div class="fnav-title">${x.title}</div>
+              <div class="fnav-status">${s==='ok'?'Complete':s==='wip'?'In Progress':'Not Started'}</div>
+            </div>
+            <div class="fnav-check ${checkCls}">${checkInner}</div>
+          </div>`;
         }).join('')}
-      </div>
-      <div class="ftr">
-        <button class="btn btn-s" onclick="go(${S.step-1})" ${S.step===0?'disabled':''}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 12L6 8L10 4"/></svg>
-          Previous
-        </button>
-        <div style="display:flex;gap:8px;">
-          ${last?'':`<button class="btn btn-g" onclick="saveS()">Save Section</button>`}
-          ${last?(S.recordIds[m.key]?`<button class="btn btn-ok" onclick="home()">Finished</button>`
-               :`<button class="btn btn-ok" onclick="saveFin()">Save & Review</button>`)
-               :`<button class="btn btn-p" onclick="go(${S.step+1})">Next
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4L10 8L6 12"/></svg>
-                </button>`}
+      </nav>
+      <div class="form-main">
+        <div class="card${S.isRerender?' no-anim':''}">
+          <div class="card-accent"></div>
+          <div class="card-hdr">
+            <div class="card-ico" style="background:${m.iconBg}">${m.icon}</div>
+            <div><h2>${m.title}</h2><p>${m.desc}</p></div>
+          </div>
+          <div class="card-body">
+            ${m.sections.map(sec=>{
+              const vf=sec.fields.filter(f=>vis(f,m.key));
+              if(!vf.length) return '';
+              return `<div class="sec">${sec.title}</div><div class="grid">${vf.map(f=>rf(f,m.key)).join('')}</div>`;
+            }).join('')}
+          </div>
+          <div class="ftr">
+            <button class="btn btn-s" onclick="go(${S.step-1})" ${S.step===0?'disabled':''}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 12L6 8L10 4"/></svg>
+              Previous
+            </button>
+            <div style="display:flex;gap:8px;">
+              ${last?'':`<button class="btn btn-g" onclick="saveS()">Save Section</button>`}
+              ${last?(S.recordIds[m.key]?`<button class="btn btn-ok" onclick="home()">Finished</button>`
+                   :`<button class="btn btn-ok" onclick="saveFin()">Save & Review</button>`)
+                   :`<button class="btn btn-p" onclick="go(${S.step+1})">Next
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4L10 8L6 12"/></svg>
+                    </button>`}
+            </div>
+          </div>
         </div>
       </div>
     </div>`;

@@ -65,3 +65,4 @@ function modStat(mk){
 }
 function fc(mk){return af(MODULES.find(x=>x.key===mk)).filter(f=>!emp(S.data[mk][f.n])).length;}
 function dc(){return activeModules().filter(m=>modStat(m.key)==='ok').length;}
+function allReqDone(){return !activeModules().some(m=>af(m).some(f=>f.req&&vis(f,m.key)&&emp(S.data[m.key][f.n])));}

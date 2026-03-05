@@ -28,9 +28,9 @@
 
 const MODULES = [
 
-  // ─────────────────── 0. PARENT — Needs Analysis ──────────────────
+  // ─────────────────── 0. PARENT — Overview ──────────────────
   {
-    key:'parent', title:'Needs Analysis', icon:'\u{1F4CB}', iconBg:'#F0F4FF',
+    key:'parent', title:'Overview', icon:'\u{1F4CB}', iconBg:'#F0F4FF',
     desc:'Client overview, requirements scope, pain points & priorities',
     zohoModule:null, // saved via updateRecord directly to S.naId
     sections:[

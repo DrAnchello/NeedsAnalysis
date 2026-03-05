@@ -47,6 +47,31 @@ function doSubmit(){
   submitAll();
 }
 
+function saveForLater(){
+  if(S.saving) return;
+  S.saving=true;
+  const am=activeModules();
+  var chain=Promise.resolve(true);
+  am.forEach(function(m){
+    chain=chain.then(function(prev){ return saveMod(m).then(function(ok){ return prev&&ok; }); });
+  });
+  chain.then(function(ok){
+    S.saving=false;
+    if(ok&&S.naId){
+      ZOHO.CRM.API.updateRecord({Entity:"Needs_Analysis",
+        APIData:{id:S.naId,Analysis_Status:"In Progress"},
+        Trigger:["workflow"]}).then(function(){
+          S.data.parent.Analysis_Status='In Progress';
+          toast('Progress saved — you can continue later','ok');
+          render();
+        });
+    }else{
+      toast(ok?'Progress saved':'Some sections failed to save','ok');
+      render();
+    }
+  });
+}
+
 function closeWidget(){
   ZOHO.CRM.UI.Popup.closeReload();
 }
