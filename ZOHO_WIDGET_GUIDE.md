@@ -232,6 +232,10 @@ function initZoho() {
     S.entity = data.Entity;
     S.leadId = Array.isArray(data.EntityId) ? data.EntityId[0] : data.EntityId;
 
+    // Set dimensions inside PageLoad — this is the correct placement.
+    // Calling Resize() after init() but outside PageLoad does not work reliably.
+    ZOHO.CRM.UI.Resize({ height: "1100", width: "1600" });
+
     render(); // Show loading state immediately — don't leave the user with a blank screen
 
     // Fetch the triggering record, then load/create widget data
@@ -251,7 +255,7 @@ function initZoho() {
   });
 
   ZOHO.embeddedApp.init();
-  ZOHO.CRM.UI.Resize({ height: "625", width: "750" }); // set widget dimensions
+  // NOTE: do NOT call Resize() here — call it inside PageLoad (see above)
 }
 ```
 
@@ -747,11 +751,7 @@ function render() {
 
 ### rSum(el) — summary/overview screen
 
-Renders:
-- Brand bar and header
-- SVG progress ring (uses `stroke-dasharray` / `stroke-dashoffset`)
-- Grid of module cards, each clickable to navigate to that step
-- Submit bar with conditional state (submitted / all-done / in-progress)
+Uses a **two-panel layout**: a fixed-width left sidebar with the progress ring and submit actions, and a flexible right main area with the clickable module cards.
 
 ```js
 function rSum(el) {
@@ -766,56 +766,82 @@ function rSum(el) {
     <div class="brand-bar"></div>
     <div class="hdr">...</div>
 
-    <!-- Progress ring -->
-    <div class="dash-ring">
-      <svg width="44" height="44" viewBox="0 0 44 44">
-        <circle class="dash-ring-track" cx="22" cy="22" r="18"/>
-        <circle class="dash-ring-fill" cx="22" cy="22" r="18"
-          stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
-      </svg>
-      <div class="dash-ring-text">${pct}%</div>
-    </div>
+    <div class="sum-layout">
 
-    <!-- Module cards -->
-    <div class="sgrid">
-      ${am.map((m, i) => {
-        const s      = modStat(m.key);
-        const total  = af(m).length;
-        const filled = fc(m.key);
-        const barPct = total > 0 ? Math.round((filled / total) * 100) : 0;
-        return \`<div class="scard ${s === 'ok' ? 's-ok' : s === 'wip' ? 's-wip' : ''}" onclick="go(${i})">
-          <div class="scard-h">
-            <h3><span class="scard-ico" style="background:${m.iconBg}">${m.icon}</span>${m.title}</h3>
-            <span class="sbadge ${s === 'ok' ? 'sb-ok' : s === 'wip' ? 'sb-wip' : 'sb-no'}">
-              ${s === 'ok' ? 'Complete' : s === 'wip' ? 'In Progress' : 'Not Started'}
-            </span>
-          </div>
-          <p>${m.desc}</p>
-          <div class="fc">
-            ${filled}/${total} fields
-            <div class="fc-bar"><div class="fc-bar-fill" style="width:${barPct}%"></div></div>
-          </div>
-        </div>\`;
-      }).join('')}
-    </div>
+      <!-- LEFT SIDEBAR: progress ring + per-module status + submit actions -->
+      <div class="sum-sidebar">
 
-    <!-- Submit bar -->
-    <div class="submit-bar">
-      ${allReqDone()
-        ? `<span class="hint">Ready to submit</span>
-           <button class="btn btn-ok" onclick="doSubmit()">Submit</button>`
-        : `<span class="hint">Complete all required fields</span>
-           <div style="display:flex;gap:8px;">
-             <button class="btn btn-g" onclick="saveForLater()">Save for Later</button>
-             <button class="btn btn-ok" disabled>Submit</button>
-           </div>`}
+        <!-- Progress stat card -->
+        <div class="sum-stat-card">
+          <div class="dash-ring" style="width:68px;height:68px;">
+            <svg width="68" height="68" viewBox="0 0 44 44">
+              <circle class="dash-ring-track" cx="22" cy="22" r="18"/>
+              <circle class="dash-ring-fill" cx="22" cy="22" r="18"
+                stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <div class="dash-ring-text" style="font-size:13px;">${pct}%</div>
+          </div>
+          <div class="sum-stat-label"><strong>${c} of ${t}</strong> sections complete</div>
+          <div class="sum-stat-divider"></div>
+          ${am.map(m => {
+            const s = modStat(m.key);
+            return \`<div class="sum-stat-row">
+              <span class="sum-stat-ico" style="background:\${m.iconBg}">\${m.icon}</span>
+              <span class="sum-stat-name">\${m.title}</span>
+              <span class="sbadge \${s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'}"
+                style="font-size:9px;padding:2px 6px;">
+                \${s==='ok'?'Done':s==='wip'?'WIP':'—'}
+              </span>
+            </div>\`;
+          }).join('')}
+        </div>
+
+        <!-- Submit action card -->
+        <div class="sum-action-card">
+          ${allReqDone()
+            ? `<p class="sum-action-hint">All sections complete — ready to submit</p>
+               <button class="btn btn-ok" onclick="doSubmit()" style="width:100%;">Submit Analysis</button>`
+            : `<p class="sum-action-hint">Complete all required fields before submitting</p>
+               <div style="display:flex;flex-direction:column;gap:8px;">
+                 <button class="btn btn-g" onclick="saveForLater()" style="width:100%;">Save for Later</button>
+                 <button class="btn btn-ok" style="width:100%;" disabled>Submit Analysis</button>
+               </div>`}
+        </div>
+
+      </div>
+
+      <!-- RIGHT MAIN: 3-column module card grid -->
+      <div class="sum-main">
+        <div class="sgrid">
+          ${am.map((m, i) => {
+            const s      = modStat(m.key);
+            const total  = af(m).length;
+            const filled = fc(m.key);
+            const barPct = total > 0 ? Math.round((filled / total) * 100) : 0;
+            return \`<div class="scard \${s==='ok'?'s-ok':s==='wip'?'s-wip':''}" onclick="go(\${i})">
+              <div class="scard-h">
+                <h3><span class="scard-ico" style="background:\${m.iconBg}">\${m.icon}</span>\${m.title}</h3>
+                <span class="sbadge \${s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'}">
+                  \${s==='ok'?'Complete':s==='wip'?'In Progress':'Not Started'}
+                </span>
+              </div>
+              <p>\${m.desc}</p>
+              <div class="fc">
+                \${filled}/\${total} fields
+                <div class="fc-bar"><div class="fc-bar-fill" style="width:\${barPct}%"></div></div>
+              </div>
+            </div>\`;
+          }).join('')}
+        </div>
+      </div>
+
     </div>`;
 }
 ```
 
 ### rForm(el) — step form screen
 
-Renders the stepper, card header, fields (via `rf()`), and navigation footer.
+Replaces the old horizontal stepper bar with a **vertical sidebar nav** (`.form-nav`) beside the card. The card body expands to fill available height — no `max-height` cap needed at the large widget size.
 
 ```js
 function rForm(el) {
@@ -830,46 +856,58 @@ function rForm(el) {
       <button class="btn btn-s" onclick="home()">← Overview</button>
     </div>
 
-    <!-- Stepper -->
-    <div class="stepper">
-      ${am.map((x, i) => {
-        const s   = modStat(x.key);
-        const cls = i === S.step ? 'active' : s === 'ok' ? 'done' : '';
-        const ico = s === 'ok' && i !== S.step ? '✓' : (i + 1);
-        return `<div class="stp ${cls}" onclick="go(${i})">
-          <div class="stp-num">${ico}</div>
-          <div class="stp-lbl">${x.title}</div>
-          ${i < am.length - 1 ? '<div class="stp-line"></div>' : ''}
-        </div>`;
-      }).join('')}
-    </div>
+    <div class="form-layout">
 
-    <!-- Card -->
-    <div class="card${S.isRerender ? ' no-anim' : ''}">
-      <div class="card-accent"></div>
-      <div class="card-hdr">
-        <div class="card-ico" style="background:${m.iconBg}">${m.icon}</div>
-        <div><h2>${m.title}</h2><p>${m.desc}</p></div>
-      </div>
-      <div class="card-body">
-        ${m.sections.map(sec => {
-          const vf = sec.fields.filter(f => vis(f, m.key));
-          if (!vf.length) return '';
-          return `<div class="sec">${sec.title}</div>
-                  <div class="grid">${vf.map(f => rf(f, m.key)).join('')}</div>`;
+      <!-- LEFT SIDEBAR: vertical module navigation -->
+      <nav class="form-nav">
+        <div class="fnav-header">Sections</div>
+        ${am.map((x, i) => {
+          const s        = modStat(x.key);
+          const isActive = i === S.step;
+          // fnav-check state: active-dot (current), done (complete), wip (partial)
+          const checkCls = isActive ? 'active-dot' : s === 'ok' ? 'done' : s === 'wip' ? 'wip' : '';
+          const checkInner = s === 'ok' && !isActive ? '✓' : '';
+          return `<div class="fnav-item ${isActive ? 'active' : ''}" onclick="go(${i})">
+            <span class="fnav-ico" style="background:${x.iconBg}">${x.icon}</span>
+            <div class="fnav-info">
+              <div class="fnav-title">${x.title}</div>
+              <div class="fnav-status">${s === 'ok' ? 'Complete' : s === 'wip' ? 'In Progress' : 'Not Started'}</div>
+            </div>
+            <div class="fnav-check ${checkCls}">${checkInner}</div>
+          </div>`;
         }).join('')}
-      </div>
-      <div class="ftr">
-        <button class="btn btn-s" onclick="go(${S.step - 1})" ${S.step === 0 ? 'disabled' : ''}>
-          ← Previous
-        </button>
-        <div style="display:flex;gap:8px;">
-          ${last
-            ? `<button class="btn btn-ok" onclick="saveFin()">Save & Review</button>`
-            : `<button class="btn btn-g" onclick="saveS()">Save Section</button>
-               <button class="btn btn-p" onclick="go(${S.step + 1})">Next →</button>`}
+      </nav>
+
+      <!-- RIGHT MAIN: card fills remaining height -->
+      <div class="form-main">
+        <div class="card${S.isRerender ? ' no-anim' : ''}">
+          <div class="card-accent"></div>
+          <div class="card-hdr">
+            <div class="card-ico" style="background:${m.iconBg}">${m.icon}</div>
+            <div><h2>${m.title}</h2><p>${m.desc}</p></div>
+          </div>
+          <div class="card-body">
+            ${m.sections.map(sec => {
+              const vf = sec.fields.filter(f => vis(f, m.key));
+              if (!vf.length) return '';
+              return `<div class="sec">${sec.title}</div>
+                      <div class="grid">${vf.map(f => rf(f, m.key)).join('')}</div>`;
+            }).join('')}
+          </div>
+          <div class="ftr">
+            <button class="btn btn-s" onclick="go(${S.step - 1})" ${S.step === 0 ? 'disabled' : ''}>
+              ← Previous
+            </button>
+            <div style="display:flex;gap:8px;">
+              ${last
+                ? `<button class="btn btn-ok" onclick="saveFin()">Save & Review</button>`
+                : `<button class="btn btn-g" onclick="saveS()">Save Section</button>
+                   <button class="btn btn-p" onclick="go(${S.step + 1})">Next →</button>`}
+            </div>
+          </div>
         </div>
       </div>
+
     </div>`;
 }
 ```
@@ -1143,22 +1181,53 @@ In `widget.css`, find the `:root` block and update the `--brand-*` values:
 }
 ```
 
-Everything that uses brand colors (buttons, focus rings, stepper, chips) will update automatically.
+Everything that uses brand colors (buttons, focus rings, nav indicators, chips) will update automatically.
 
 ### Layout classes
 
+**Chrome / shell**
+
 | Class | Purpose |
 |-------|---------|
-| `.container` | Max 880px centred wrapper, `24px` padding |
+| `.container` | Max `1520px` centred wrapper, `24px` padding |
 | `.brand-bar` | 3px gradient top accent stripe |
-| `.hdr` | Flex header row with logo, title, and right slot |
-| `.stepper` | Step indicator bar |
-| `.stp` | Individual step (add `.active` or `.done`) |
-| `.card` | Main content card with shadow and border |
+| `.hdr` | Flex header row with logo, title, and right action slot |
+| `.card` | Content card with shadow and border |
 | `.card-accent` | Gradient top strip on card |
 | `.card-hdr` | Card header with icon + title/desc |
-| `.card-body` | Scrollable form area (`max-height: 58vh`) |
+| `.card-body` | Scrollable form area (fills height in two-panel layout) |
 | `.ftr` | Card footer with prev/next/save buttons |
+
+**Summary screen — two-panel layout**
+
+| Class | Purpose |
+|-------|---------|
+| `.sum-layout` | Flex row — sidebar + main |
+| `.sum-sidebar` | Left panel, `260px` fixed width, stacks vertically |
+| `.sum-main` | Right panel, `flex: 1`, holds `.sgrid` |
+| `.sum-stat-card` | White card: progress ring + per-module status rows |
+| `.sum-stat-row` | One row: icon, module name, mini badge |
+| `.sum-stat-ico` | `22px` icon box in stat row |
+| `.sum-stat-name` | Module name label in stat row |
+| `.sum-stat-divider` | 1px horizontal rule between ring and rows |
+| `.sum-action-card` | White card: submit / save-for-later actions |
+| `.sum-action-hint` | Muted hint text above action buttons |
+| `.sgrid` | 3-column grid for module cards |
+
+**Form screen — two-panel layout**
+
+| Class | Purpose |
+|-------|---------|
+| `.form-layout` | Flex row, `height: calc(100vh - 130px)` |
+| `.form-nav` | Left sidebar, `220px`, scrollable vertical nav |
+| `.fnav-header` | "Sections" label at top of nav |
+| `.fnav-item` | One module row in nav (add `.active` for current step) |
+| `.fnav-ico` | `30px` emoji icon in nav item |
+| `.fnav-info` | Wrapper for title + status text in nav item |
+| `.fnav-title` | Module name in nav item |
+| `.fnav-status` | Completion text ("Complete", "In Progress", etc.) |
+| `.fnav-check` | Status indicator circle — add `.done` / `.wip` / `.active-dot` |
+| `.form-main` | Right flex column that holds the card |
 
 ### Grid system
 
@@ -1185,7 +1254,7 @@ Everything that uses brand colors (buttons, focus rings, stepper, chips) will up
 ### Summary cards (.scard)
 
 ```html
-<div class="sgrid">               <!-- 2-column grid -->
+<div class="sgrid">               <!-- 3-column grid inside .sum-main -->
   <div class="scard s-ok">        <!-- s-ok=complete, s-wip=partial, (none)=empty -->
     <div class="scard-h">
       <h3><span class="scard-ico">🔧</span>Module Name</h3>
@@ -1225,10 +1294,21 @@ Add `disabled` attribute to grey out any button. Do not use CSS only — set the
 ### Setting dimensions
 
 ```js
-ZOHO.CRM.UI.Resize({ height: "625", width: "750" });
+// Inside the PageLoad callback — this is the only reliable placement
+ZOHO.CRM.UI.Resize({ height: "1100", width: "1600" });
 ```
 
-Call this inside `initZoho()`. Zoho enforces a maximum — test at the target size. Common sizes: `625×750` (standard form), `400×600` (compact), `700×900` (large).
+**Important:** call `Resize()` inside the `PageLoad` event handler, not after `ZOHO.embeddedApp.init()`. Calling it outside PageLoad is unreliable — Zoho may silently ignore it.
+
+The current widget uses `1100 × 1600` to support the two-panel layout. Common sizes for reference:
+
+| Size | Dimensions | Use case |
+|------|-----------|----------|
+| Compact | `400 × 600` | Simple single-field popups |
+| Standard form | `625 × 750` | Single-column multi-step forms |
+| Large two-panel | `1100 × 1600` | Side-nav + form, wide content |
+
+Zoho enforces a platform maximum — test at the target dimensions in a live org to confirm they are accepted.
 
 ### Widget lifecycle
 

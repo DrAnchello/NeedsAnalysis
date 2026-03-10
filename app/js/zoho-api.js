@@ -82,7 +82,14 @@ function createNARecord(){
     var output=resp.details&&resp.details.output;
     if(output) S.naId=String(output);
     if(S.naId){
-      loadParentAndChildren();
+      // Set Analysis_Status to Draft on newly created records
+      ZOHO.CRM.API.updateRecord({Entity:"Needs_Analysis",
+        APIData:{id:S.naId,Analysis_Status:"Draft"},
+        Trigger:["workflow"]}).then(function(){
+          loadParentAndChildren();
+        }).catch(function(){
+          loadParentAndChildren();
+        });
     }else{
       console.error('Failed to create NA record',resp);
       toast('Failed to create Needs Analysis','err');

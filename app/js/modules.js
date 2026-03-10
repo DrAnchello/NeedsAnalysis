@@ -30,7 +30,7 @@ const MODULES = [
 
   // ─────────────────── 0. PARENT — Overview ──────────────────
   {
-    key:'parent', title:'Overview', icon:'\u{1F4CB}', iconBg:'#F0F4FF',
+    key:'parent', title:'Overview', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>', iconBg:'#F0F4FF',
     desc:'Client overview, requirements scope, pain points & priorities',
     zohoModule:null, // saved via updateRecord directly to S.naId
     sections:[
@@ -98,7 +98,7 @@ const MODULES = [
 
   // ─────────────────────── 1. NA UCaaS ────────────────────────────
   {
-    key:'ucaas', title:'UCaaS', icon:'\u{1F4DE}', iconBg:'#EFF6FF',
+    key:'ucaas', title:'UCaaS', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>', iconBg:'#EFF6FF',
     desc:'Phones, SIP, PBX, Porting, Fax, LAN & Features',
     zohoModule:'NA_UCaaS_PBX',
     sections:[
@@ -180,7 +180,7 @@ const MODULES = [
 
   // ─────────────────────── 2. NA CCaaS ────────────────────────────
   {
-    key:'ccaas', title:'CCaaS', icon:'\u{1F3A7}', iconBg:'#FDF4FF',
+    key:'ccaas', title:'CCaaS', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>', iconBg:'#F0F5FF',
     desc:'Contact Centre — Agents, Channels, CRM & Branding',
     zohoModule:'NA_Contact_Centre',
     sections:[
@@ -216,7 +216,7 @@ const MODULES = [
 
   // ────────────────── 3. NA Access and Security ───────────────────
   {
-    key:'access', title:'Access & Security', icon:'\u{1F512}', iconBg:'#FEF3C7',
+    key:'access', title:'Access & Security', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>', iconBg:'#F0F5FF',
     desc:'Network Access, Connectivity & Security',
     zohoModule:'NA_Network_Security',
     sections:[
@@ -259,7 +259,7 @@ const MODULES = [
 
   // ──────────────────── 4. NA Digital Channels ────────────────────
   {
-    key:'digital', title:'Digital Channels', icon:'\u{1F4AC}', iconBg:'#F0FDF4',
+    key:'digital', title:'Digital Channels', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', iconBg:'#F0F5FF',
     desc:'WhatsApp, Web Chat, SMS, Email & Engage',
     zohoModule:'NA_Digital_Channels',
     sections:[
@@ -307,7 +307,7 @@ const MODULES = [
 
   // ────────────── 5. NA 3rd Party Integrations ────────────────────
   {
-    key:'integrations', title:'3rd Party Integrations', icon:'\u{1F517}', iconBg:'#EFF6FF',
+    key:'integrations', title:'3rd Party Integrations', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>', iconBg:'#EFF6FF',
     desc:'CRM, ERP, WFM, QM & Payment Gateway',
     zohoModule:'NA_Third_Party_Integration',
     sections:[

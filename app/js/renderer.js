@@ -62,12 +62,13 @@ function rSum(el){
           </div>
           <div class="sum-stat-label"><strong>${c} of ${t}</strong> sections complete</div>
           <div class="sum-stat-divider"></div>
-          ${am.map(m=>{
-            const s=modStat(m.key);
-            return `<div class="sum-stat-row">
-              <span class="sum-stat-ico" style="background:${m.iconBg}">${m.icon}</span>
+          ${MODULES.map(m=>{
+            const isActive=am.some(x=>x.key===m.key);
+            const s=isActive?modStat(m.key):'no';
+            return `<div class="sum-stat-row${isActive?'':' sum-stat-off'}">
+              <span class="sum-stat-ico" style="background:${isActive?m.iconBg:'var(--gray-100)'}">${m.icon}</span>
               <span class="sum-stat-name">${m.title}</span>
-              <span class="sbadge ${s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'}" style="font-size:9px;padding:2px 6px;">${s==='ok'?'Done':s==='wip'?'WIP':'—'}</span>
+              <span class="sbadge ${isActive?(s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'):'sb-off'}" style="font-size:9px;padding:2px 6px;">${isActive?(s==='ok'?'Done':s==='wip'?'WIP':'—'):'Off'}</span>
             </div>`;
           }).join('')}
         </div>
@@ -87,22 +88,31 @@ function rSum(el){
       </div>
       <div class="sum-main">
         <div class="sgrid">
-          ${am.map((m,i)=>{
-            const s=modStat(m.key);
+          ${MODULES.map((m)=>{
+            const isActive=am.some(x=>x.key===m.key);
+            const amIdx=am.findIndex(x=>x.key===m.key);
+            const s=isActive?modStat(m.key):'no';
             const total=af(m).length;
-            const filled=fc(m.key);
+            const filled=isActive?fc(m.key):0;
             const barPct=total>0?Math.round((filled/total)*100):0;
-            return `<div class="scard ${s==='ok'?'s-ok':s==='wip'?'s-wip':''}" onclick="go(${i})">
-              <div class="scard-h">
-                <h3><span class="scard-ico" style="background:${m.iconBg}">${m.icon}</span>${m.title}</h3>
-                <span class="sbadge ${s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no'}">${s==='ok'?'Complete':s==='wip'?'In Progress':'Not Started'}</span>
-              </div>
-              <p>${m.desc}</p>
-              <div class="fc">
-                ${filled}/${total} fields
-                <div class="fc-bar"><div class="fc-bar-fill" style="width:${barPct}%"></div></div>
-              </div>
-            </div>`;
+            const cls=isActive
+              ?'scard s-enabled '+(s==='ok'?'s-ok':s==='wip'?'s-wip':'')
+              :'scard s-disabled';
+            const click=isActive?'onclick="go('+amIdx+')"':'';
+            const badge=isActive
+              ?'<span class="sbadge '+(s==='ok'?'sb-ok':s==='wip'?'sb-wip':'sb-no')+'">'+(s==='ok'?'Complete':s==='wip'?'In Progress':'Not Started')+'</span>'
+              :'<span class="sbadge sb-off">Not Selected</span>';
+            return '<div class="'+cls+'" '+click+'>'
+              +'<div class="scard-h">'
+                +'<h3><span class="scard-ico" style="background:'+m.iconBg+'">'+m.icon+'</span>'+m.title+'</h3>'
+                +badge
+              +'</div>'
+              +'<p>'+m.desc+'</p>'
+              +'<div class="fc">'
+                +filled+'/'+total+' fields'
+                +'<div class="fc-bar"><div class="fc-bar-fill" style="width:'+barPct+'%"></div></div>'
+              +'</div>'
+            +'</div>';
           }).join('')}
         </div>
       </div>
